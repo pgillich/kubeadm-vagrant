@@ -1,4 +1,4 @@
-BOX_IMAGE = "ubuntu/xenial64"
+BOX_IMAGE = "peru/ubuntu-18.04-server-amd64"
 SETUP_MASTER = true
 SETUP_NODES = true
 NODE_COUNT = 2
@@ -7,34 +7,146 @@ NODE_IP_NW = "192.168.26."
 #NODE_IP_NW = "192.168.122."
 POD_NW_CIDR = "10.244.0.0/16"
 
-#Generate new using steps in README
+#Generate new using steps in README.md
 KUBETOKEN = "b029ee.968a33e8d8e6bb0d"
+
+#Generate new using steps in README.md
+TRAEFIK_PWD = "admin:$apr1$uw3AepIL$ovewjfAEc5dF.t5hyi5RA1"
 
 $kubeminionscript = <<MINIONSCRIPT
 
-kubeadm reset
-kubeadm join --token #{KUBETOKEN} #{MASTER_IP}:6443
+sudo kubeadm reset -f
+sudo kubeadm join --discovery-token-unsafe-skip-ca-verification --token #{KUBETOKEN} #{MASTER_IP}:6443
 
 MINIONSCRIPT
 
 $kubemasterscript = <<SCRIPT
 
-kubeadm reset
-kubeadm init --apiserver-advertise-address=#{MASTER_IP} --pod-network-cidr=#{POD_NW_CIDR} --token #{KUBETOKEN} --token-ttl 0
+# Call kubeadm
+
+sudo kubeadm reset -f
+sudo kubeadm init --apiserver-advertise-address=#{MASTER_IP} --pod-network-cidr=#{POD_NW_CIDR} --token #{KUBETOKEN} --token-ttl 0
+
+# Set kubectl config
 
 mkdir -p $HOME/.kube
 sudo cp -Rf /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+mkdir -p /home/vagrant/.kube/
+sudo cp -Rf /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+sudo chown vagrant:vagrant /home/vagrant/.kube/config
+
+# Networking
 
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/namespace.yaml
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/metallb.yaml
+kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - #{NODE_IP_NW}129-#{NODE_IP_NW}254
+EOF
+
+# Helm
+
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+# Traefik 1.x
+
+helm repo add stable https://charts.helm.sh/stable
+
+cat <<EOF |helm install -f - -n kube-system --version 1.81.0 traefik stable/traefik
+dashboard:
+  enabled: true
+  domain:  "traefik.internal"
+rbac:
+  enabled: true
+ssl:
+  enabled: true
+metrics:
+  prometheus:
+    enabled: true
+kubernetes:
+  ingressEndpoint:
+    useDefaultPublishedService: true
+image: "rancher/library-traefik"
+tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Exists"
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+EOF
+
+# Dashboard
+
+GITHUB_URL=https://github.com/kubernetes/dashboard/releases
+VERSION_KUBE_DASHBOARD=$(curl -w '%{url_effective}' -I -L -s -S ${GITHUB_URL}/latest -o /dev/null | sed -e 's|.*/||')
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/${VERSION_KUBE_DASHBOARD}/aio/deploy/alternative.yaml
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+EOF
+
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubernetes-dashboard-ingress
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+  - host: kubernetes.internal
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kubernetes-dashboard
+            port:
+              number: 80
+EOF
 
 SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.box = BOX_IMAGE
   config.vm.box_check_update = false
+  config.vm.provider :libvirt
 
-  config.vm.provider "virtualbox" do |l|
+  config.vm.provider "libvirt" do |l|
     l.cpus = 1
     l.memory = "1024"
   end
@@ -49,9 +161,9 @@ Vagrant.configure("2") do |config|
     config.vm.define "master" do |subconfig|
       subconfig.vm.hostname = "master"
       subconfig.vm.network :private_network, ip: MASTER_IP
-      subconfig.vm.provider :virtualbox do |vb|
-        vb.customize ["modifyvm", :id, "--cpus", "2"]
-        vb.customize ["modifyvm", :id, "--memory", "2048"]
+      subconfig.vm.provider :libvirt do |vb|
+        vb.cpus = 2
+        vb.memory = 2048
       end
       subconfig.vm.provision :shell, inline: $kubemasterscript
     end
