@@ -2,6 +2,8 @@
 
 This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04.
 
+> It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
+
 The default provider was VirtualBox, but this description uses KVM. If you would like to use VirtualBox hypervisor, please read original Vagrantfile at <https://github.com/coolsvap/kubeadm-vagrant/blob/master/Ubuntu/Vagrantfile>.
 
 Used versions:
@@ -18,16 +20,11 @@ Used versions:
 * MetalLB: latest (v0.9.5)
 * Traefik: 1 latest (1.7.19, Helm 1.81.0)
 
-Traefik version is similar to K3s built-in Traefik version, because Traefik 2 does not support the whole functionality on Ingress (for example: path prefix strip), moreover there is no newer than 1.7.19 image in Docker Hub.
+Traefik version is same to K3s built-in Traefik version, because Traefik 2 does not support the whole functionality on Ingress (for example: path prefix strip), moreover there is no newer than 1.7.19 image in Docker Hub.
 
-Traefik (ingress controller) and MetalLB (L2/ARP load balancer) setup are based on:
+**For homeworkers**: if you are using VPN, a few K8s subnets (10.244.0.0/16, 10.96.0.0/12, 192.168.26.0/24) may not be in the VPN-routed address space. See more details in the `Vagrantfile` and at <https://coreos.com/flannel/docs/latest/kubernetes.html> and <https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/>.
 
-* <https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0>
-* <https://www.devtech101.com/2019/02/23/using-metallb-and-traefik-load-balancing-for-your-bare-metal-kubernetes-cluster-part-1/>
-* <https://www.devtech101.com/2019/03/02/using-traefik-as-your-ingress-controller-combined-with-metallb-on-your-bare-metal-kubernetes-cluster-part-2/>
-* <https://stackoverflow.com/questions/50585616/kubernetes-metallb-traefik-how-to-get-real-client-ip>
-* <https://www.disasterproject.com/kubernetes-with-external-dns/>
-* <https://metallb.universe.tf/installation/>
+> Warning: This example is not secure and must be hardened before using it in production.
 
 ## Preparations
 
@@ -74,34 +71,35 @@ sudo apt-get install -y kubectl
 
 Tested version: v1.20.1
 
-### Generate security info
+## Configuration
 
-Change below generated strings in `Vagrantfile`
-
-KUBETOKEN (if you have instaled kubeadm somewhere):
+If you have instaled kubeadm somewhere, generate below token, which will be set as `KUBETOKEN` in `Vagrantfile`:
 
 ```sh
 kubeadm token generate
 ```
 
-TRAEFIK_PWD (without `admin:` prefix):
+Review Vagrant config at the beginning of `Vagrantfile`.
+
+Open hosts file:
 
 ```sh
-htpasswd -nbm admin <NEW_PASSWORD>
+sudo nano /etc/hosts
 ```
 
-The current Traefik dashboard password to admin user is: admin
+Add Traefik IP address (see `NODE_IP_NW` and `OAM_DOMAIN` in `Vagrantfile`) and save+exit:
 
-## Setup
+```text
+192.168.26.254       oam.cluster-01.company.com
+```
+
+## Deployment
 
 Install:
 
 ```sh
 #maybe: export VAGRANT_DEFAULT_PROVIDER=libvirt
 vagrant up --no-parallel
-#vagrant up master
-#vagrant up node1
-#vagrant up node2
 ```
 
 Kubectl config for host:
@@ -111,12 +109,36 @@ vagrant ssh master -c 'cat .kube/config' >~/.kube/config
 chmod go-rw ${HOME}/.kube/config
 ```
 
-Accessing Dashboard at <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
+Test commands:
+
+```sh
+kubectl cluster-info
+kubectl get nodes -o wide
+kubectl get all -A -o wide
+kubectl get endpoints -A
+kubectl get ingress -A
+sudo crictl ps -a
+```
+
+## Usage
+
+### Dashboards
+
+Getting token to Kubernetes Dashboard:
 
 ```sh
 kubectl -n kubernetes-dashboard describe secret admin-user-token | grep ^token
-kubectl proxy
 ```
+
+Dashboards can be accessed trough ingress at:
+
+* Traefik: <http://oam.cluster-01.company.com>
+* Kubernetes: <https://oam.cluster-01.company.com/kubernetes/>
+
+Dashboards can be accessed trough `kubectl proxy` (it should be run in a separated terminal) at:
+
+* Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
+* Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
 
 ## Web server deployment
 
