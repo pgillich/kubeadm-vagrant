@@ -1,6 +1,6 @@
 # K8s on Ubuntu on KVM
 
-This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04.
+This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04. Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
