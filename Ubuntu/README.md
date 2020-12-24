@@ -16,6 +16,7 @@ Used versions:
 * docker-ce: 5:19.03.11~3-0
 * docker-ce-cli: 5:19.03.11~3-0
 * Helm: 3 latest (v3.4.2)
+* Metrics: 0.3.6 (Heml 2.11.4)
 * Kubernetes Dashboard: latest (v2.1.0)
 * MetalLB: latest (v0.9.5)
 * Traefik: 1 latest (1.7.19, Helm 1.81.0)
@@ -73,13 +74,13 @@ Tested version: v1.20.1
 
 ## Configuration
 
-If you have instaled kubeadm somewhere, generate below token, which will be set as `KUBETOKEN` in `Vagrantfile`:
+Optional: if you have instaled kubeadm somewhere, generate below token, which will be set as `KUBETOKEN` in `Vagrantfile`:
 
 ```sh
 kubeadm token generate
 ```
 
-Review Vagrant config at the beginning of `Vagrantfile`.
+Review Vagrant config at the beginning of `Vagrantfile`...
 
 Open hosts file:
 
@@ -87,7 +88,7 @@ Open hosts file:
 sudo nano /etc/hosts
 ```
 
-Add Traefik IP address (see `NODE_IP_NW` and `OAM_DOMAIN` in `Vagrantfile`) and save+exit:
+Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` in `Vagrantfile`) and save+exit:
 
 ```text
 192.168.26.254       oam.cluster-01.company.com
@@ -102,7 +103,7 @@ Install:
 vagrant up --no-parallel
 ```
 
-Kubectl config for host:
+Kubectl config for host (warning: it overwrites `~/.kube/config`):
 
 ```sh
 vagrant ssh master -c 'cat .kube/config' >~/.kube/config
@@ -118,6 +119,7 @@ kubectl get all -A -o wide
 kubectl get endpoints -A
 kubectl get ingress -A
 sudo crictl ps -a
+kubectl top pod --containers -A
 ```
 
 ## Usage
@@ -132,34 +134,10 @@ kubectl -n kubernetes-dashboard describe secret admin-user-token | grep ^token
 
 Dashboards can be accessed trough ingress at:
 
-* Traefik: <http://oam.cluster-01.company.com>
+* Traefik: <http://oam.cluster-01.company.com/dashboard/>
 * Kubernetes: <https://oam.cluster-01.company.com/kubernetes/>
 
 Dashboards can be accessed trough `kubectl proxy` (it should be run in a separated terminal) at:
 
 * Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
 * Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
-
-## Web server deployment
-
-Generate deployment file:
-
-```sh
-kubectl run nginx-example --image=nginx --port=80 --expose=true --dry-run -o yaml > nginx-example.yaml
-```
-
-Set `nginx.yaml:Service.spec.type=LoadBalancer`:
-
-nginx.yaml
-
-```yaml
-kind: Service
-spec:
-  type: LoadBalancer
-```
-
-Deploy:
-
-```sh
-kubectl apply -f nginx-example.yaml
-```
