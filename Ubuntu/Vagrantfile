@@ -1,4 +1,6 @@
 BOX_IMAGE = "peru/ubuntu-18.04-server-amd64"
+# Using Ubuntu 20.04 in VMs, instead of 18.04:
+#BOX_IMAGE = "peru/ubuntu-20.04-server-amd64"
 SETUP_MASTER = true
 MEM_MASTER = 2048
 SETUP_NODES = true

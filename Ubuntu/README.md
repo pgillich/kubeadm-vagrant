@@ -50,12 +50,16 @@ Based on:
 
 ```sh
 sudo apt install qemu libvirt-daemon-system libvirt-clients libxslt-dev libxml2-dev libvirt-dev zlib1g-dev ruby-dev ruby-libvirt ebtables dnsmasq-base
-#maybe: sudo apt install libvirt-bin vagrant-libvirt
+#MAYBE: sudo apt install libvirt-bin vagrant-libvirt
 export VAGRANT_DEFAULT_PROVIDER=libvirt
 vagrant plugin install vagrant-libvirt
 vagrant plugin install vagrant-mutate
-#maybe: vagrant plugin uninstall vagrant-disksize
-vagrant box add --provider libvirt "peru/ubuntu-18.04-server-amd64"
+#MAYBE: vagrant plugin uninstall vagrant-disksize
+
+BOX_IMAGE="peru/ubuntu-18.04-server-amd64"
+# Using Ubuntu 20.04 in VMs, instead of 18.04 (Vagrantfile must be updated, too):
+#BOX_IMAGE="peru/ubuntu-20.04-server-amd64"
+vagrant box add --provider libvirt ${BOX_IMAGE}
 ```
 
 ### Install kubectl
@@ -99,7 +103,7 @@ Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` i
 Install:
 
 ```sh
-#maybe: export VAGRANT_DEFAULT_PROVIDER=libvirt
+#MAYBE: export VAGRANT_DEFAULT_PROVIDER=libvirt
 vagrant up --no-parallel
 ```
 
