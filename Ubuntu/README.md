@@ -1,14 +1,14 @@
 # K8s on Ubuntu on KVM
 
-This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04. Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
+This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20.04). Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
-The default provider was VirtualBox, but this description uses KVM. If you would like to use VirtualBox hypervisor, please read original Vagrantfile at <https://github.com/coolsvap/kubeadm-vagrant/blob/master/Ubuntu/Vagrantfile>.
+The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too.
 
 Used versions:
 
-* Host: Ubuntu 18.04.5
+* Host: Ubuntu 18.04.5 or Windows 10
 * Guests: peru/ubuntu-18.04-server-amd64 20201203.01
 * Kubernetes: latest (v1.20.1)
 * Flannel: latest (v0.13.1-rc1)
@@ -41,6 +41,20 @@ Follow <https://www.vagrantup.com/docs/installation>
 
 Tested version: 2.2.14
 
+### Preparing VirtualBox
+
+Preparing VirtualBox on Windows 10 or Ubuntu host:
+
+```sh
+export VAGRANT_DEFAULT_PROVIDER=virtualbox
+```
+
+Preparing VirtualBox on Windows 10 host:
+
+```sh
+vagrant plugin install vagrant-hostmanager
+```
+
 ### Install KVM support for Vagrant
 
 Based on:
@@ -48,23 +62,39 @@ Based on:
 * <https://github.com/vagrant-libvirt/vagrant-libvirt>
 * <https://ostechnix.com/how-to-use-vagrant-with-libvirt-kvm-provider/>
 
+Preparing KVM/Libvirt on Ubuntu host:
+
 ```sh
 sudo apt install qemu libvirt-daemon-system libvirt-clients libxslt-dev libxml2-dev libvirt-dev zlib1g-dev ruby-dev ruby-libvirt ebtables dnsmasq-base
 #MAYBE: sudo apt install libvirt-bin vagrant-libvirt
+
 export VAGRANT_DEFAULT_PROVIDER=libvirt
 vagrant plugin install vagrant-libvirt
 vagrant plugin install vagrant-mutate
 #MAYBE: vagrant plugin uninstall vagrant-disksize
+```
 
+### Download box image
+
+Selecting guest image:
+
+```sh
 BOX_IMAGE="peru/ubuntu-18.04-server-amd64"
 # Using Ubuntu 20.04 in VMs, instead of 18.04 (Vagrantfile must be updated, too):
 #BOX_IMAGE="peru/ubuntu-20.04-server-amd64"
-vagrant box add --provider libvirt ${BOX_IMAGE}
+```
+
+Download box image:
+
+```sh
+vagrant box add --provider ${VAGRANT_DEFAULT_PROVIDER} ${BOX_IMAGE}
 ```
 
 ### Install kubectl
 
 <https://kubernetes.io/docs/tasks/tools/install-kubectl/>
+
+On Ubuntu:
 
 ```sh
 sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2 curl
@@ -90,6 +120,7 @@ Open hosts file:
 
 ```sh
 sudo nano /etc/hosts
+# On Windows: C:\Windows\System32\drivers\etc\hosts
 ```
 
 Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` in `Vagrantfile`) and save+exit:
@@ -109,10 +140,14 @@ vagrant up --no-parallel
 
 Kubectl config for host (warning: it overwrites `~/.kube/config`):
 
+On Ubuntu:
+
 ```sh
 vagrant ssh master -c 'cat .kube/config' >~/.kube/config
 chmod go-rw ${HOME}/.kube/config
 ```
+
+Note: in MobaXterm the vagrant ssh works only in `cmd` shell.
 
 Test commands:
 
