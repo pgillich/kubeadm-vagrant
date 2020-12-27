@@ -80,6 +80,10 @@ Preparing VirtualBox on Windows 10 host:
 vagrant plugin install vagrant-hostmanager
 ```
 
+### Persist `VAGRANT_DEFAULT_PROVIDER`
+
+The `export VAGRANT_DEFAULT_PROVIDER=...` can be added to `~/.bashrc`
+
 ### Download box image
 
 Selecting guest image.
@@ -126,7 +130,19 @@ Optional: if you have instaled kubeadm somewhere, generate below token, which wi
 kubeadm token generate
 ```
 
-Review Vagrant config at the beginning of `Vagrantfile`...
+Review Vagrant config at the beginning of `Vagrantfile`. The `kubeadm` config file is equivalent to:<br/>
+`sudo kubeadm init --apiserver-advertise-address=#{MASTER_IP} --pod-network-cidr=#{POD_NW_CIDR} --token #{KUBETOKEN} --token-ttl 0`
+, plus `feature-gates=EphemeralContainers=true`
+
+Helpful commands to check the `kubeadm` configuration:
+
+```sh
+sudo kubeadm config print init-defaults --component-configs KubeProxyConfiguration,KubeletConfiguration
+sudo kubeadm config view
+kubectl get cm -n kube-system kubeadm-config -o yaml
+kubectl get cm -n kube-system kube-proxy -o yaml
+vagrant ssh master -c 'sudo grep -r EphemeralContainers /etc/kubernetes/manifests/ /var/lib/kubelet/'
+```
 
 Open hosts file (On Windows: `C:\Windows\System32\drivers\etc\hosts`):
 
@@ -142,20 +158,16 @@ Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` i
 
 ## Deployment
 
-Install:
+## Vagrant deployment
 
 ```sh
 #export VAGRANT_DEFAULT_PROVIDER=...
 vagrant up --no-parallel
 ```
 
-### Workarounds
-
-*Only if VirtualBox provider is selected:* You may patch Flannel running parameter, see **Known Issues**. 
-
 ### Kubectl config for host
 
-Warning: it overwrites `~/.kube/config`.
+*Warning: it overwrites `~/.kube/config`.*
 
 ```sh
 vagrant ssh master -c 'cat .kube/config' >~/.kube/config
@@ -224,13 +236,8 @@ The `--pod-network-cidr` already set in the deployment.
 The `--iface=eth1` parameter can be added manually, for example:
 
 ```sh
-# Identify the interface, which provides 192.168.26.10 (for example: eth1, enp0s8)
-vagrant ssh master -c 'ip a'
-
 kubectl edit -n kube-system daemonset.apps/kube-flannel-ds
-```
 
-```yaml
 spec:
   template:
     (...)
@@ -244,9 +251,9 @@ spec:
       (...)
 ```
 
-Note: the `--iface-regex=[eth1|enp0s8]` can be more generic (not tested).
+Patched by a dummy sed expression in `Vagrantfile`.
 
-Status: Workaround.
+Status: Solved.
 
 ### Metrics server cannot start
 
@@ -258,5 +265,21 @@ E1227 08:36:54.703124       1 manager.go:111] unable to fully collect metrics: [
 ```
 
 A parameter `--kubelet-preferred-address-types=InternalIP` added the the deployment.
+
+Status: Solved.
+
+### Ephemeral Debug Containers
+
+Does not work.
+
+More info:
+
+* <https://github.com/kubernetes-sigs/kind/issues/1210>
+* <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/>
+* <https://alexsimonjones.medium.com/kubectl-debug-time-to-say-goodbye-to-baking-diagnostic-tools-into-your-containers-47f6802d982b>
+* <https://cdn.lbryplayer.xyz/api/v3/streams/free/debugpod/fea38048fe9f5648149ff6c1798afc34add1c77f/60d4df>
+* <https://cdn.lbryplayer.xyz/api/v3/streams/free/debugpod/fea38048fe9f5648149ff6c1798afc34add1c77f/60d4df>
+
+Finally, it was successful, see `Vagrantfile`.
 
 Status: Solved.

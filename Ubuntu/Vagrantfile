@@ -28,7 +28,46 @@ $kubemasterscript = <<SCRIPT
 # Call kubeadm
 
 sudo kubeadm reset -f
-sudo kubeadm init --apiserver-advertise-address=#{MASTER_IP} --pod-network-cidr=#{POD_NW_CIDR} --token #{KUBETOKEN} --token-ttl 0
+
+cat <<EOF > /tmp/kubeadm-config.yaml
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: InitConfiguration
+bootstrapTokens:
+- token: "#{KUBETOKEN}"
+  ttl: "0"
+localAPIEndpoint:
+  advertiseAddress: #{MASTER_IP}
+nodeRegistration:
+  kubeletExtraArgs:
+    "feature-gates": "EphemeralContainers=true"
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+networking:
+  podSubnet: #{POD_NW_CIDR}
+apiServer:
+  extraArgs:
+    "feature-gates": "EphemeralContainers=true"
+scheduler:
+  extraArgs:
+    "feature-gates": "EphemeralContainers=true"
+controllerManager:
+  extraArgs:
+    "feature-gates": "EphemeralContainers=true"
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+featureGates:
+  EphemeralContainers: true
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+featureGates:
+  EphemeralContainers: true
+
+EOF
+
+sudo kubeadm init --config /tmp/kubeadm-config.yaml
 
 # Set kubectl config
 
@@ -41,7 +80,9 @@ sudo chown vagrant:vagrant /home/vagrant/.kube/config
 
 # Networking
 
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+curl -sfL https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml > /tmp/kube-flannel.yml
+sed -i -e '/--kube-subnet-mgr/a\\' -e '        - --iface=eth1' /tmp/kube-flannel.yml
+kubectl apply -f /tmp/kube-flannel.yml
 
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/namespace.yaml
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/metallb.yaml
@@ -64,7 +105,7 @@ EOF
 
 # Helm
 
-curl -s https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+curl -sfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
 
 helm repo add stable https://charts.helm.sh/stable
 
