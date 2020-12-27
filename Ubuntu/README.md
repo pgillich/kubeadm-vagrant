@@ -4,7 +4,7 @@ This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
-The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too.
+The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider.
 
 Used versions:
 
@@ -29,33 +29,23 @@ Traefik version is same to K3s built-in Traefik version, because Traefik 2 does 
 
 ## Preparations
 
-### Install KVM and virt-manager
-
-Follow <https://help.ubuntu.com/community/KVM/Installation>
-
-Tested version: 1:2.11+dfsg-1ubuntu7.34
-
 ### Install Vagrant
 
 Follow <https://www.vagrantup.com/docs/installation>
 
 Tested version: 2.2.14
 
-### Preparing VirtualBox
+### Install KVM and virt-manager
 
-Preparing VirtualBox on Windows 10 or Ubuntu host:
+*Only if Libvirt/KVM provider is selected:*
 
-```sh
-export VAGRANT_DEFAULT_PROVIDER=virtualbox
-```
+Follow <https://help.ubuntu.com/community/KVM/Installation>
 
-Preparing VirtualBox on Windows 10 host:
-
-```sh
-vagrant plugin install vagrant-hostmanager
-```
+Tested version: 1:2.11+dfsg-1ubuntu7.34
 
 ### Install KVM support for Vagrant
+
+*Only if Libvirt/KVM provider is selected:*
 
 Based on:
 
@@ -74,14 +64,36 @@ vagrant plugin install vagrant-mutate
 #MAYBE: vagrant plugin uninstall vagrant-disksize
 ```
 
+### Preparing VirtualBox
+
+*Only if VirtualBox provider is selected:*
+
+Preparing VirtualBox on Windows 10 or Ubuntu host:
+
+```sh
+export VAGRANT_DEFAULT_PROVIDER=virtualbox
+```
+
+Preparing VirtualBox on Windows 10 host:
+
+```sh
+vagrant plugin install vagrant-hostmanager
+```
+
 ### Download box image
 
-Selecting guest image:
+Selecting guest image.
+
+If Ubuntu 18.04 was selected:
 
 ```sh
 BOX_IMAGE="peru/ubuntu-18.04-server-amd64"
-# Using Ubuntu 20.04 in VMs, instead of 18.04 (Vagrantfile must be updated, too):
-#BOX_IMAGE="peru/ubuntu-20.04-server-amd64"
+```
+
+If Ubuntu 20.04 (Vagrantfile must be updated, too) was selected:
+
+```sh
+BOX_IMAGE="peru/ubuntu-20.04-server-amd64"
 ```
 
 Download box image:
@@ -92,9 +104,9 @@ vagrant box add --provider ${VAGRANT_DEFAULT_PROVIDER} ${BOX_IMAGE}
 
 ### Install kubectl
 
-<https://kubernetes.io/docs/tasks/tools/install-kubectl/>
+Based on: <https://kubernetes.io/docs/tasks/tools/install-kubectl/>
 
-On Ubuntu:
+On Ubuntu host:
 
 ```sh
 sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2 curl
@@ -116,11 +128,10 @@ kubeadm token generate
 
 Review Vagrant config at the beginning of `Vagrantfile`...
 
-Open hosts file:
+Open hosts file (On Windows: `C:\Windows\System32\drivers\etc\hosts`):
 
 ```sh
 sudo nano /etc/hosts
-# On Windows: C:\Windows\System32\drivers\etc\hosts
 ```
 
 Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` in `Vagrantfile`) and save+exit:
@@ -134,7 +145,7 @@ Add external Traefik IP address - FQDN pair (see `NODE_IP_NW` and `OAM_DOMAIN` i
 Install:
 
 ```sh
-#MAYBE: export VAGRANT_DEFAULT_PROVIDER=libvirt
+#export VAGRANT_DEFAULT_PROVIDER=...
 vagrant up --no-parallel
 ```
 
@@ -147,7 +158,7 @@ vagrant ssh master -c 'cat .kube/config' >~/.kube/config
 chmod go-rw ${HOME}/.kube/config
 ```
 
-Note: in MobaXterm the vagrant ssh works only in `cmd` shell.
+Note: in MobaXterm, the `vagrant ssh` works only in `cmd` shell, see **Known issues** below.
 
 Test commands:
 
@@ -157,7 +168,6 @@ kubectl get nodes -o wide
 kubectl get all -A -o wide
 kubectl get endpoints -A
 kubectl get ingress -A
-sudo crictl ps -a
 kubectl top pod --containers -A
 ```
 
@@ -180,3 +190,64 @@ Dashboards can be accessed trough `kubectl proxy` (it should be run in a separat
 
 * Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
 * Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
+
+## Known issues
+
+### `vagrant ssh` in MobaXterm
+
+It's failed. Use another Cygwin distro (for example: Git Bash) or run it from `cmd`, for example:
+
+```sh
+cmd /C vagrant ssh master
+```
+
+Status: Workaround.
+
+### Vagrant - VirtualBox - Flannel
+
+A few services cannot be accessed on VirtualBox setup. It's not appeared with KVM provider (unique addresses were configured).
+
+Vagrant typically assigns two interfaces to all VMs. The first, for which all hosts are assigned the IP address 10.0.2.15, is for external traffic that gets NATed.
+
+See more details:
+
+* <https://coreos.com/flannel/docs/latest/troubleshooting.html#vagrant>
+* <https://discuss.kubernetes.io/t/flannel-yaml-file-customization-iface-for-vagrant-linux-cluster/4873/2>
+* <https://stackoverflow.com/questions/53569760/kubernetes-v1-12-dashboard-is-running-but-timeout-occurred-while-accessing-it-vi>
+
+The `--pod-network-cidr` already set in the deployment.
+
+The `--iface=eth1` parameter can be added manually, for example:
+
+```sh
+kubectl edit -n kube-system daemonset.apps/kube-flannel-ds
+```
+
+```yaml
+spec:
+  template:
+    (...)
+    spec:
+      (...)
+      containers:
+      - args:
+        - --ip-masq
+        - --kube-subnet-mgr
+        - --iface=eth1
+      (...)
+```
+
+Status: Workaround.
+
+### Metrics server cannot start
+
+On VirtualBox environment, metrics-server Pod is continously restarted, because it unable to fetch metrics from Kubelet, see the Pod log:
+
+```text
+I1227 08:35:24.688213       1 secure_serving.go:116] Serving securely on [::]:8443
+E1227 08:36:54.703124       1 manager.go:111] unable to fully collect metrics: [unable to fully scrape metrics from source kubelet_summary:node1: unable to fetch metrics from Kubelet node1 (node1): Get https://node1:10250/stats/summary?only_cpu_and_memory=true: dial tcp: i/o timeout, unable to fully scrape metrics from source kubelet_summary:master: unable to fetch metrics from Kubelet master (master): Get https://master:10250/stats/summary?only_cpu_and_memory=true: dial tcp: i/o timeout, unable to fully scrape metrics from source kubelet_summary:node2: unable to fetch metrics from Kubelet node2 (node2): Get https://node2:10250/stats/summary?only_cpu_and_memory=true: dial tcp: i/o timeout]
+```
+
+A parameter `--kubelet-preferred-address-types=InternalIP` added the the deployment.
+
+Status: Solved.

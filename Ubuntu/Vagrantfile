@@ -1,6 +1,7 @@
 BOX_IMAGE = "peru/ubuntu-18.04-server-amd64"
 # Using Ubuntu 20.04 in VMs, instead of 18.04:
 #BOX_IMAGE = "peru/ubuntu-20.04-server-amd64"
+
 SETUP_MASTER = true
 MEM_MASTER = 2048
 SETUP_NODES = true
@@ -68,7 +69,7 @@ curl -s https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | 
 helm repo add stable https://charts.helm.sh/stable
 
 # Metrics
-helm install metrics-server stable/metrics-server --version 2.11.4 --set 'args={--kubelet-insecure-tls}' --namespace kube-system
+helm install metrics-server stable/metrics-server --version 2.11.4 --set 'args={--kubelet-insecure-tls, --kubelet-preferred-address-types=InternalIP}' --namespace kube-system
 
 # Traefik 1.x
 
@@ -175,7 +176,7 @@ Vagrant.configure("2") do |config|
       subconfig.vm.hostname = "master"
       subconfig.vm.network :private_network, ip: MASTER_IP
 
-      subconfig.vm.provider :virtualbox  do |vb|
+      subconfig.vm.provider :virtualbox do |vb|
         vb.customize ["modifyvm", :id, "--cpus", "2"]
         vb.customize ["modifyvm", :id, "--memory", "#{MEM_MASTER}"]
       end
