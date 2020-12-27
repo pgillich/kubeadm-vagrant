@@ -149,9 +149,13 @@ Install:
 vagrant up --no-parallel
 ```
 
-Kubectl config for host (warning: it overwrites `~/.kube/config`):
+### Workarounds
 
-On Ubuntu:
+*Only if VirtualBox provider is selected:* You may patch Flannel running parameter, see **Known Issues**. 
+
+### Kubectl config for host
+
+Warning: it overwrites `~/.kube/config`.
 
 ```sh
 vagrant ssh master -c 'cat .kube/config' >~/.kube/config
@@ -160,7 +164,7 @@ chmod go-rw ${HOME}/.kube/config
 
 Note: in MobaXterm, the `vagrant ssh` works only in `cmd` shell, see **Known issues** below.
 
-Test commands:
+### Test
 
 ```sh
 kubectl cluster-info
@@ -191,7 +195,7 @@ Dashboards can be accessed trough `kubectl proxy` (it should be run in a separat
 * Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
 * Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
 
-## Known issues
+## Known Issues
 
 ### `vagrant ssh` in MobaXterm
 
@@ -220,6 +224,9 @@ The `--pod-network-cidr` already set in the deployment.
 The `--iface=eth1` parameter can be added manually, for example:
 
 ```sh
+# Identify the interface, which provides 192.168.26.10 (for example: eth1, enp0s8)
+vagrant ssh master -c 'ip a'
+
 kubectl edit -n kube-system daemonset.apps/kube-flannel-ds
 ```
 
@@ -236,6 +243,8 @@ spec:
         - --iface=eth1
       (...)
 ```
+
+Note: the `--iface-regex=[eth1|enp0s8]` can be more generic (not tested).
 
 Status: Workaround.
 
