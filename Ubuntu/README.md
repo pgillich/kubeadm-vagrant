@@ -35,6 +35,18 @@ Follow <https://www.vagrantup.com/docs/installation>
 
 Tested version: 2.2.14
 
+If you would like to avoid vagrant-libvirt compile issues, you can use my Docker image (see: `build_vagrant-libvirt.sh`), which contains Vagrant and all needed packages. Setup (should be added to `~/.bashrc`):
+
+```sh
+alias vagrant='docker run -it --rm -e LIBVIRT_DEFAULT_URI -v /var/run/libvirt/:/var/run/libvirt/ -v ~/.vagrant.d:/.vagrant.d -v $(pwd):$(pwd) -w $(pwd) --network host pgillich/vagrant-libvirt:latest vagrant'
+```
+
+So, you can skip:
+
+* Vagrant install
+* vagrant plugin install ...
+* export VAGRANT_DEFAULT_PROVIDER=libvirt
+
 ### Install KVM and virt-manager
 
 *Only if Libvirt/KVM provider is selected:*
@@ -74,13 +86,11 @@ Preparing VirtualBox on Windows 10 or Ubuntu host:
 export VAGRANT_DEFAULT_PROVIDER=virtualbox
 ```
 
-Preparing VirtualBox on Windows 10 host:
+### Preparing Vagrant
 
 ```sh
 vagrant plugin install vagrant-hostmanager
 ```
-
-### Persist `VAGRANT_DEFAULT_PROVIDER`
 
 The `export VAGRANT_DEFAULT_PROVIDER=...` can be added to `~/.bashrc`
 
