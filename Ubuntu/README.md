@@ -182,6 +182,7 @@ vagrant up --no-parallel
 *Warning: it overwrites `~/.kube/config`.*
 
 ```sh
+mkdir -p ~/.kube
 vagrant ssh master -c 'cat .kube/config' >~/.kube/config
 chmod go-rw ${HOME}/.kube/config
 ```
@@ -295,3 +296,9 @@ More info:
 Finally, it was successful, see `Vagrantfile`.
 
 Status: Solved.
+
+### Vagrant in docker
+
+If Vagrant is running in Docker (see: `alias vagrant='docker run ...`), the `vagrant ssh master -c ...` does not work.
+
+Status: Not solved.
