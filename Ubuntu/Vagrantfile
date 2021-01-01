@@ -11,6 +11,8 @@ SETUP_APPS = true
 MASTER_IP = "192.168.26.10"
 NODE_IP_NW = "192.168.26."
 #NODE_IP_NW = "192.168.122."
+METALLB_POOL = "#{NODE_IP_NW}129-#{NODE_IP_NW}254"
+OAM_IP = "#{NODE_IP_NW}254"
 POD_NW_CIDR = "10.244.0.0/16"
 OAM_DOMAIN = "oam.cluster-01.company.com"
 
@@ -109,7 +111,7 @@ data:
     - name: default
       protocol: layer2
       addresses:
-      - #{NODE_IP_NW}129-#{NODE_IP_NW}254
+      - #{METALLB_POOL}
 EOF
 
 # Helm
@@ -127,7 +129,7 @@ cat <<EOF | helm install traefik stable/traefik --version 1.81.0 --namespace kub
 dashboard:
   enabled: true
   domain:  "#{OAM_DOMAIN}"
-loadBalancerIP: "#{NODE_IP_NW}254"
+loadBalancerIP: "#{OAM_IP}"
 rbac:
   enabled: true
 ssl:
