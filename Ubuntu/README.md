@@ -191,7 +191,7 @@ vagrant up --no-parallel
 
 ```sh
 mkdir -p ~/.kube
-vagrant ssh master -c 'cat .kube/config' >~/.kube/config
+vagrant ssh master -- 'cat .kube/config' >~/.kube/config
 chmod go-rw ${HOME}/.kube/config
 ```
 
