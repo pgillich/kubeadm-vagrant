@@ -4,7 +4,7 @@ This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
-The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider.
+The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider. The weird VM-in-VM also works: Windows 10 host --> VirtualBox --> Ubuntu 18.04 middle --> KVM --> Ubuntu 18.04/20.04 guests.
 
 Used versions:
 
