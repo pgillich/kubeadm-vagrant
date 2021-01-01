@@ -7,6 +7,7 @@ MEM_MASTER = 2048
 SETUP_NODES = true
 NODE_COUNT = 2
 MEM_NODE = 1024
+SETUP_APPS = (ENV["SETUP_APPS"] || "true")
 MASTER_IP = "192.168.26.10"
 NODE_IP_NW = "192.168.26."
 #NODE_IP_NW = "192.168.122."
@@ -78,11 +79,17 @@ mkdir -p /home/vagrant/.kube/
 sudo cp -Rf /etc/kubernetes/admin.conf /home/vagrant/.kube/config
 sudo chown vagrant:vagrant /home/vagrant/.kube/config
 
-# Networking
+# CNI
 
 curl -sfL https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml > /tmp/kube-flannel.yml
 sed -i -e '/--kube-subnet-mgr/a\\' -e '        - --iface=eth1' /tmp/kube-flannel.yml
 kubectl apply -f /tmp/kube-flannel.yml
+
+SCRIPT
+
+$kubeappsscript = <<APPSSCRIPT
+
+# Load Balancer
 
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/namespace.yaml
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/metallb.yaml
@@ -189,7 +196,7 @@ spec:
               number: 80
 EOF
 
-SCRIPT
+APPSSCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.box = BOX_IMAGE
@@ -228,6 +235,10 @@ Vagrant.configure("2") do |config|
       end
 
       subconfig.vm.provision :shell, inline: $kubemasterscript
+
+      if SETUP_APPS
+        subconfig.vm.provision :shell, inline: $kubeappsscript
+      end
     end
   end
 

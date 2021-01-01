@@ -38,9 +38,17 @@ Tested version: 2.2.14
 If you would like to avoid vagrant-libvirt compile issues, you can use my Docker image (see: `build_vagrant-libvirt.sh`), which contains Vagrant and all needed packages. Setup (should be added to `~/.bashrc`):
 
 ```sh
-mkdir -p ~/.vagrant.d/{boxes,data,tmp}
-ls -la ~/.vagrant.d # All dirs must be owned by you
-alias vagrant='docker run -it --rm -e LIBVIRT_DEFAULT_URI -v /var/run/libvirt/:/var/run/libvirt/ -v ~/.vagrant.d:/.vagrant.d -v $(pwd):$(pwd) -w $(pwd) --network host pgillich/vagrant-libvirt:latest vagrant'
+alias vagrant='
+  mkdir -p ~/.vagrant.d/{boxes,data,tmp}; \
+  docker run -it --rm \
+    -e LIBVIRT_DEFAULT_URI \
+    -v /var/run/libvirt/:/var/run/libvirt/ \
+    -v ~/.vagrant.d:/.vagrant.d \
+    -v $(pwd):$(pwd) \
+    -w $(pwd) \
+    --network host \
+    pgillich/vagrant-libvirt:latest \
+    vagrant'
 ```
 
 So, you can skip:
@@ -153,7 +161,7 @@ sudo kubeadm config print init-defaults --component-configs KubeProxyConfigurati
 sudo kubeadm config view
 kubectl get cm -n kube-system kubeadm-config -o yaml
 kubectl get cm -n kube-system kube-proxy -o yaml
-vagrant ssh master -c 'sudo grep -r EphemeralContainers /etc/kubernetes/manifests/ /var/lib/kubelet/'
+vagrant ssh master -- 'sudo grep -r EphemeralContainers /etc/kubernetes/manifests/ /var/lib/kubelet/'
 ```
 
 Open hosts file (On Windows: `C:\Windows\System32\drivers\etc\hosts`):
