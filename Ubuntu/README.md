@@ -232,10 +232,16 @@ Dashboards can be accessed trough `kubectl proxy` (it should be run in a separat
 
 ### `vagrant ssh` in MobaXterm
 
-It's failed. Use another Cygwin distro (for example: Git Bash) or run it from `cmd`, for example:
+It's failed. Use Windows `ssh` for example:
 
 ```sh
 cmd /C vagrant ssh master
+```
+
+or:
+
+```sh
+PATH=$(cygpath "$WINDIR/System32/OpenSSH"):$PATH vagrant ssh master
 ```
 
 Status: Workaround.
@@ -309,4 +315,6 @@ Status: Solved.
 
 If Vagrant is running in Docker (see: `alias vagrant='docker run ...`), the `vagrant ssh master -c ...` does not work.
 
-Status: Not solved.
+Solution: use `vagrant ssh master -- ...`
+
+Status: Solved.
