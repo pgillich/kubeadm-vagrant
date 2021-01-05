@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 sudo swapoff -a
 
 sudo apt-get update
-sudo apt-get install -y apt-transport-https gnupg2 curl ca-certificates software-properties-common
+sudo apt-get install -y apt-transport-https gnupg2 curl ca-certificates software-properties-common nfs-common
 
 curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
