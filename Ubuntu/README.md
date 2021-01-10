@@ -1,6 +1,8 @@
 # K8s on Ubuntu on KVM
 
-This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20.04). Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
+This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20.04).
+If the host is Ubuntu 20.04, Ubuntu 18.04 VM is not supported (only 20.04).
+Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
@@ -8,8 +10,8 @@ The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. 
 
 Used versions:
 
-* Host: Ubuntu 18.04.5 or Windows 10
-* Guests: peru/ubuntu-18.04-server-amd64 20201203.01
+* Host: Ubuntu 18.04.5 (or 20.04.1) or Windows 10
+* Guests: peru/ubuntu-18.04-server-amd64 20201203.01 (or 20.04)
 * Kubernetes: latest (v1.20.1)
 * Flannel: latest (v0.13.1-rc1)
 * containerd.io: 1.2.13-2
