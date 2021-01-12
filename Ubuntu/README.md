@@ -1,17 +1,22 @@
 # K8s on Ubuntu on KVM
 
 This Vagrant config makes master and worker VMs. The VMs are Ubuntu 18.04 (or 20.04).
-If the host is Ubuntu 20.04, Ubuntu 18.04 VM is not supported (only 20.04).
 Concepts and considerations are written at <https://pgillich.medium.com/setup-on-premise-kubernetes-with-kubeadm-metallb-traefik-and-vagrant-8a9d8d28951a>.
 
 > It's forked from <https://github.com/coolsvap/kubeadm-vagrant>.
 
-The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider. The weird VM-in-VM also works: Windows 10 host --> VirtualBox --> Ubuntu 18.04 middle --> KVM --> Ubuntu 18.04/20.04 guests.
+The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider.
+
+The weird VM-in-VM also works: Windows 10 host --> VirtualBox or Hyper-V --> Ubuntu 18.04 middle --> KVM --> Ubuntu 18.04/20.04 guests. In this case, nested virtualization must be enabled on the host hypervisor. It's enabled in VirtualBox by default, but disabled in Hyper-V. To enable nested virtualization, see below:
+
+* <https://docs.microsoft.com/en-us/system-center/vmm/vm-nested-virtualization?view=sc-vmm-20190>
+* <https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/user-guide/nested-virtualization>
+* <https://github.com/MicrosoftDocs/Virtualization-Documentation/tree/master/hyperv-tools/Nested>
 
 Used versions:
 
 * Host: Ubuntu 18.04.5 (or 20.04.1) or Windows 10
-* Guests: peru/ubuntu-18.04-server-amd64 20201203.01 (or 20.04)
+* Guests: peru/ubuntu-18.04-server-amd64 20201203.01 (or 20.04). *Please check known issue **KVM BIOS cannot boot***
 * Kubernetes: latest (v1.20.1)
 * Flannel: latest (v0.13.1-rc1)
 * containerd.io: 1.2.13-2
@@ -320,3 +325,16 @@ If Vagrant is running in Docker (see: `alias vagrant='docker run ...`), the `vag
 Solution: use `vagrant ssh master -- ...`
 
 Status: Solved.
+
+### KVM BIOS cannot boot
+
+KVM BIOS cannot boot newer Ubuntu images.
+
+Workaround: using older box version. Example for removing latest 18.04 box and downloading older:
+
+```sh
+vagrant box remove peru/ubuntu-18.04-server-amd64
+vagrant box add peru/ubuntu-18.04-server-amd64 --box-version 20201203.01 --provider libvirt
+```
+
+Status: Workaround
