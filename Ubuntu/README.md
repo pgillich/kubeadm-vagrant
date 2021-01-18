@@ -7,7 +7,7 @@ Concepts and considerations are written at <https://pgillich.medium.com/setup-on
 
 The default provider is VirtualBox, but Libvirt/KVM can also be used on Ununtu. VirtualBox provider tested on Windows 10 with Cygwin (MobaXterm), too. There are several issues and manual workarounds with Windows host setup. The most robust setup is Ubuntu host + KVM provider.
 
-The weird VM-in-VM also works: Windows 10 host --> VirtualBox or Hyper-V --> Ubuntu 18.04 middle --> KVM --> Ubuntu 18.04/20.04 guests. In this case, nested virtualization must be enabled on the host hypervisor. It's enabled in VirtualBox by default, but disabled in Hyper-V. To enable nested virtualization, see below:
+The weird VM-in-VM also works: Windows 10 host --> VirtualBox or Hyper-V --> Ubuntu 18.04/20.04 middle --> KVM --> Ubuntu 18.04/20.04 guests. In this case, nested virtualization must be enabled on the host hypervisor. It's enabled in VirtualBox by default, but disabled in Hyper-V. To enable nested virtualization, see below:
 
 * <https://docs.microsoft.com/en-us/system-center/vmm/vm-nested-virtualization?view=sc-vmm-20190>
 * <https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/user-guide/nested-virtualization>
@@ -234,6 +234,22 @@ Dashboards can be accessed trough `kubectl proxy` (it should be run in a separat
 
 * Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
 * Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
+
+### Capturing network traffic
+
+The script `capture_pod.sh` starts `tcpdump` on the node and pipes captured packets to Wireshark. Wireshark may have additional privileges, see: <https://askubuntu.com/questions/74059/how-do-i-run-wireshark-with-root-privileges>
+
+Export SSH client config:
+
+```sh
+vagrant ssh-config | grep -v 'Starting with UID' > ssh-config
+```
+
+Run capture script with Namespace and Pod name (works with only single-container Pod), for example:
+
+```sh
+./capture_pod.sh default my-nginx-596d59c679-9t4vp
+```
 
 ## Known Issues
 
