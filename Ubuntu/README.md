@@ -235,7 +235,7 @@ Dashboards can be accessed trough `kubectl proxy` (it should be run in a separat
 * Traefik: <http://localhost:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard/>
 * Kubernetes: <http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/>
 
-### Capturing network traffic
+### Capturing network traffic on the node
 
 The script `capture_pod.sh` starts `tcpdump` on the node and pipes captured packets to Wireshark. Wireshark may have additional privileges, see: <https://askubuntu.com/questions/74059/how-do-i-run-wireshark-with-root-privileges>
 
@@ -245,10 +245,18 @@ Export SSH client config:
 vagrant ssh-config | grep -v 'Starting with UID' > ssh-config
 ```
 
-Run capture script with Namespace and Pod name (works with only single-container Pod), for example:
+Run capture script with Namespace and Pod name, for example (container name is optional):
 
 ```sh
-./capture_pod.sh default my-nginx-596d59c679-9t4vp
+./capture_pod.sh default my-nginx-596d59c679-9t4vp nginx
+```
+
+### Capturing network traffic in the container
+
+The script `capture_in_pod.sh` builds a statically-compiled tcpdump, copies it into the container, starts the capture and pipes the packets to wireshark. Example usage (container name is optional):
+
+```sh
+./capture_in_pod.sh default my-nginx-596d59c679-9t4vp nginx
 ```
 
 ## Known Issues
